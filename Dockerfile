@@ -1,13 +1,20 @@
-FROM node:22-alpine
+FROM node:16-alpine
 
-WORKDIR /app.js
+WORKDIR /app
 
-COPY package.json .
+COPY package.json package-lock.json ./
 
-RUN npm install 
+RUN npm install
 
 COPY . .
 
+# Build the app for production
+RUN npm run build
+
+# Install serve to run the production build
+RUN npm install -g serve
+
 EXPOSE 3000
 
-CMD ["npm","start"]
+# Start the app using serve
+CMD ["serve", "-s", "build", "-l", "3000"]

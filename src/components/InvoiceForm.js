@@ -14,7 +14,7 @@ class InvoiceForm extends React.Component {
     super(props);
     this.state = {
       isOpen: false,
-      currency: '$',
+      currency: '₹',
       currentDate: '',
       invoiceNumber: 1,
       dateOfIssue: '',
@@ -30,90 +30,129 @@ class InvoiceForm extends React.Component {
       taxRate: '',
       taxAmmount: '0.00',
       discountRate: '',
-      discountAmmount: '0.00'
+      discountAmmount: '0.00',
+      items: [
+        {
+          id: '0',
+          name: '',
+          description: '',
+          price: '1.00',
+          quantity: 1
+        }
+      ]
     };
-    this.state.items = [
-      {
-        id: 0,
+    this.editField = this.editField.bind(this);
+    this.onItemizedItemEdit = this.onItemizedItemEdit.bind(this);
+    this.handleAddEvent = this.handleAddEvent.bind(this);
+    this.handleRowDel = this.handleRowDel.bind(this);
+  }
+  componentDidMount() {
+    // Set initial currency and calculate total
+    this.setState({
+      currency: '₹',
+      currentDate: new Date().toLocaleDateString(),
+      items: [{
+        id: '0',
         name: '',
         description: '',
         price: '1.00',
         quantity: 1
-      }
-    ];
-    this.editField = this.editField.bind(this);
-  }
-  componentDidMount(prevProps) {
-    this.handleCalculateTotal()
+      }]
+    }, () => {
+      this.handleCalculateTotal();
+    });
   }
   handleRowDel(items) {
     var index = this.state.items.indexOf(items);
-    this.state.items.splice(index, 1);
-    this.setState(this.state.items);
+    var newItems = this.state.items.slice();
+    newItems.splice(index, 1);
+    this.setState({
+      items: newItems
+    }, () => {
+      this.handleCalculateTotal();
+    });
   };
   handleAddEvent(evt) {
-    var id = (+ new Date() + Math.floor(Math.random() * 999999)).toString(36);
-    var items = {
+    const id = (+ new Date() + Math.floor(Math.random() * 999999)).toString(36);
+    const newItem = {
       id: id,
       name: '',
-      price: '1.00',
       description: '',
+      price: '1.00',
       quantity: 1
-    }
-    this.state.items.push(items);
-    this.setState(this.state.items);
+    };
+    
+    this.setState(prevState => ({
+      items: [...prevState.items, newItem]
+    }), () => {
+      this.handleCalculateTotal();
+    });
   }
   handleCalculateTotal() {
-    var items = this.state.items;
-    var subTotal = 0;
+    const items = this.state.items;
+    let subTotal = 0;
 
-    items.map(function(items) {
-      subTotal = parseFloat(subTotal + (parseFloat(items.price).toFixed(2) * parseInt(items.quantity))).toFixed(2)
+    // Calculate subtotal from items
+    items.forEach(item => {
+      const price = parseFloat(item.price) || 0;
+      const quantity = parseInt(item.quantity) || 0;
+      subTotal += price * quantity;
     });
+
+    // Ensure subtotal has 2 decimal places
+    subTotal = Number(subTotal.toFixed(2));
+    const taxRate = parseFloat(this.state.taxRate) || 0;
+    const discountRate = parseFloat(this.state.discountRate) || 0;
+
+    // Step 1: Calculate discount
+    const discountAmount = Number((subTotal * (discountRate / 100)).toFixed(2));
+    
+    // Step 2: Calculate amount after discount
+    const amountAfterDiscount = Number((subTotal - discountAmount).toFixed(2));
+    
+    // Step 3: Calculate tax on the discounted amount
+    const taxAmount = Number((amountAfterDiscount * (taxRate / 100)).toFixed(2));
+
+    // Step 4: Calculate final total (discounted amount + tax)
+    const total = (amountAfterDiscount + taxAmount).toFixed(2);
 
     this.setState({
-      subTotal: parseFloat(subTotal).toFixed(2)
-    }, () => {
-      this.setState({
-        taxAmmount: parseFloat(parseFloat(subTotal) * (this.state.taxRate / 100)).toFixed(2)
-      }, () => {
-        this.setState({
-          discountAmmount: parseFloat(parseFloat(subTotal) * (this.state.discountRate / 100)).toFixed(2)
-        }, () => {
-          this.setState({
-            total: ((subTotal - this.state.discountAmmount) + parseFloat(this.state.taxAmmount))
-          });
-        });
-      });
+      subTotal: subTotal.toFixed(2),
+      discountAmmount: discountAmount.toFixed(2),
+      taxAmmount: taxAmount.toFixed(2),
+      total: total
     });
-
   };
   onItemizedItemEdit(evt) {
-    var item = {
-      id: evt.target.id,
-      name: evt.target.name,
-      value: evt.target.value
-    };
-    var items = this.state.items.slice();
-    var newItems = items.map(function(items) {
-      for (var key in items) {
-        if (key == item.name && items.id == item.id) {
-          items[key] = item.value;
+    const { id, name, value } = evt.target;
+    
+    this.setState(prevState => ({
+      items: prevState.items.map(item => {
+        if (item.id.toString() === id.toString()) {
+          return {
+            ...item,
+            [name]: value
+          };
         }
-      }
-      return items;
+        return item;
+      })
+    }), () => {
+      this.handleCalculateTotal();
     });
-    this.setState({items: newItems});
-    this.handleCalculateTotal();
   };
   editField = (event) => {
     this.setState({
       [event.target.name]: event.target.value
+    }, () => {
+      this.handleCalculateTotal();
     });
-    this.handleCalculateTotal();
   };
-  onCurrencyChange = (selectedOption) => {
-    this.setState(selectedOption);
+  onCurrencyChange = (event) => {
+    this.setState({
+      currency: event.target.value
+    }, () => {
+      this.handleCalculateTotal();
+    });
   };
   openModal = (event) => {
     event.preventDefault()
@@ -129,7 +168,7 @@ class InvoiceForm extends React.Component {
             <div className="d-flex flex-row align-items-start justify-content-between mb-3">
               <div class="d-flex flex-column">
                 <div className="d-flex flex-column">
-                  <div class="mb-2">
+                  <div className="mb-2">
                     <span className="fw-bold">Current&nbsp;Date:&nbsp;</span>
                     <span className="current-date">{new Date().toLocaleDateString()}</span>
                   </div>
@@ -163,7 +202,13 @@ class InvoiceForm extends React.Component {
                 <Form.Control placeholder={"Billing address"} value={this.state.billFromAddress} type="text" name="billFromAddress" className="my-2" autoComplete="address" onChange={(event) => this.editField(event)} required="required"/>
               </Col>
             </Row>
-            <InvoiceItem onItemizedItemEdit={this.onItemizedItemEdit.bind(this)} onRowAdd={this.handleAddEvent.bind(this)} onRowDel={this.handleRowDel.bind(this)} currency={this.state.currency} items={this.state.items}/>
+            <InvoiceItem 
+              onItemizedItemEdit={this.onItemizedItemEdit} 
+              onRowAdd={this.handleAddEvent} 
+              onRowDel={this.handleRowDel} 
+              currency={this.state.currency} 
+              items={this.state.items}
+            />
             <Row className="mt-4 justify-content-end">
               <Col lg={6}>
                 <div className="d-flex flex-row align-items-start justify-content-between">
@@ -209,17 +254,22 @@ class InvoiceForm extends React.Component {
             <InvoiceModal showModal={this.state.isOpen} closeModal={this.closeModal} info={this.state} items={this.state.items} currency={this.state.currency} subTotal={this.state.subTotal} taxAmmount={this.state.taxAmmount} discountAmmount={this.state.discountAmmount} total={this.state.total}/>
             <Form.Group className="mb-3">
               <Form.Label className="fw-bold">Currency:</Form.Label>
-              <Form.Select onChange={event => this.onCurrencyChange({currency: event.target.value})} className="btn btn-light my-1" aria-label="Change Currency">
+              <Form.Select 
+                onChange={this.onCurrencyChange} 
+                className="btn btn-light my-1" 
+                aria-label="Change Currency"
+                value={this.state.currency}
+                defaultValue="₹"
+              >
                 <option value="₹">INR (Indian Rupee)</option>
                 <option value="$">USD (United States Dollar)</option>
                 <option value="£">GBP (British Pound Sterling)</option>
                 <option value="¥">JPY (Japanese Yen)</option>
                 <option value="$">CAD (Canadian Dollar)</option>
                 <option value="$">AUD (Australian Dollar)</option>
-                <option value="$">SGD (Signapore Dollar)</option>
+                <option value="$">SGD (Singapore Dollar)</option>
                 <option value="¥">CNY (Chinese Renminbi)</option>
                 <option value="₿">BTC (Bitcoin)</option>
-                
               </Form.Select>
             </Form.Group>
             <Form.Group className="my-3">

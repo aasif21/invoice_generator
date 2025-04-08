@@ -27,4 +27,62 @@ Before running this project, make sure you have the following installed:
 - [Node.js](https://nodejs.org/)
 - [Docker](https://www.docker.com/)
 
+## Running with Docker
+
+### Production Mode
+
+To run the application in production mode:
+
+```bash
+# Build and start the container
+docker-compose up -d
+
+# Access the application at http://localhost:3000
+```
+
+### Development Mode
+
+To run the application in development mode with hot-reloading:
+
+```bash
+# Build and start the container
+docker-compose -f docker-compose.dev.yml up -d
+
+# Access the application at http://localhost:3000
+```
+
+### Building Docker Image Manually
+
+If you prefer to build and run the Docker image manually:
+
+```bash
+# Build the image
+docker build -t invoice-generator .
+
+# Run the container
+docker run -p 3000:3000 invoice-generator
+```
+
+For development:
+
+```bash
+# Build the development image
+docker build -t invoice-generator-dev -f Dockerfile.dev .
+
+# Run the development container
+docker run -p 3000:3000 -v $(pwd)/src:/app/src invoice-generator-dev
+```
+
+## Running Without Docker
+
+If you prefer to run the application without Docker:
+
+```bash
+# Install dependencies
+npm install
+
+# Start the development server
+npm start
+```
+
 
